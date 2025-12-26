@@ -1,28 +1,66 @@
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler,
+    MessageHandler, ContextTypes, filters
+)
 
 BOT_TOKEN = "7356647239:AAE2bRh9KIyeGiPA3WgOWjXZbhQt5fP7y8Y"
+ADMIN_ID = 6531073126   # O'Z TELEGRAM ID
+CHANNEL = "@kino_uz_channel"
 
-movies = {
-    "K100": "https://archive.org/details/night_of_the_living_dead",
-    "K101": "https://archive.org/details/charlie_chaplin-the-kid"
-}
+movies = {}  # code: file_id
+
+async def check_sub(user_id, bot):
+    member = await bot.get_chat_member(CHANNEL, user_id)
+    return member.status not in ["left", "kicked"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🎬 Kino kodini yuboring\nMasalan: K100"
-    )
+    await update.message.reply_text("🎬 Kino kodini yuboring")
+
+async def save_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    if not context.user_data.get("code"):
+        await update.message.reply_text("❌ Avval kod yuboring: /code K123")
+        return
+
+    code = context.user_data["code"]
+    video = update.message.video.file_id
+    movies[code] = video
+    await update.message.reply_text(f"✅ Kino saqlandi: {code}")
+    context.user_data["code"] = None
+
+async def set_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    try:
+        code = context.args[0].upper()
+        context.user_data["code"] = code
+        await update.message.reply_text(f"🎯 Endi videoni yuboring ({code})")
+    except:
+        await update.message.reply_text("Misol: /code K123")
 
 async def get_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = update.message.text.upper()
 
-    if code in movies:
-        await update.message.reply_text(f"🎥 Kino:\n{movies[code]}")
-    else:
-        await update.message.reply_text("❌ Bunday kod topilmadi")
+    if code not in movies:
+        await update.message.reply_text("❌ Bunday kod yo‘q")
+        return
+
+    if not await check_sub(update.effective_user.id, context.bot):
+        await update.message.reply_text(
+            f"❗ Avval {CHANNEL} kanaliga obuna bo‘ling"
+        )
+        return
+
+    await update.message.reply_video(movies[code])
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
+
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("code", set_code))
+app.add_handler(MessageHandler(filters.VIDEO, save_movie))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_movie))
 
 app.run_polling()
