@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = "7356647239:AAF4QyMxRA13sWYZ1Otf-LHcxvIcVkcN4gE"
+BOT_TOKEN = "7356647239:AAE2bRh9KIyeGiPA3WgOWjXZbhQt5fP7y8Y"
 
 movies = {
     "K100": "https://archive.org/details/night_of_the_living_dead",
